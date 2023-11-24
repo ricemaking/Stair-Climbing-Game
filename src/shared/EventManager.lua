@@ -22,13 +22,6 @@ local function findRandomStair()
 	
 	--print(stair)
 	return stair
-	
-	--for levelIndex,levelNum in ipairs(levels) do --get each level
-	--	for storyIndex,storyNum in ipairs(levelNum) do --get each story
-	--		stair = math.random(#EventTable60Percent)
-	--		print(EventTable60Percent[eventChooser])
-	--	end
-	--end
 end
 
 -- 60% CHANCE EVENTS --
@@ -60,23 +53,28 @@ function EventManager.RainingTacos()
 end
 
 --40% CHANCE EVENTS
+function EventManager.LandMineEvent()
+		
+end
+
+--20% CHANCE EVENTS
 function EventManager.FusRoDahEvent()
-	
+
 	local lightingColor = Lighting.ColorCorrection
-	
+
 	local fusRoDahSound = events.FusRoDahEvent["Fus Ro Dah Sound"]
 	print("FUS RO DAH!")
 	local players = Players:GetPlayers()
-	
+
 	fusRoDahSound:Play()
 	task.wait(.5)
-	
+
 	local tweenToBlue = TweenService:Create(
 		lightingColor,
 		TweenInfo.new(.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0, true),
 		{TintColor = Color3.new(0.056321, 0.659113, 1)}
 	)
-	
+
 	tweenToBlue:Play()
 	remoteEvents["ShakeCam Event"]:FireAllClients()
 	for _, plr in ipairs(players) do
@@ -86,9 +84,13 @@ function EventManager.FusRoDahEvent()
 		hum.Parent.PrimaryPart.Velocity = Vector3.new(0,200,1000)
 		hum.CameraOffset = Vector3.new(0,0,0)
 	end
+	task.wait(3)
+	for _, plr in ipairs(players) do
+		local char = plr.Character or plr.CharacterAdded:Wait()
+		local hum = char:WaitForChild("Humanoid")
+		hum.PlatformStand = false
+	end
 end
-
---20% CHANCE EVENTS
 
 --10% CHANCE EVENTS
 
