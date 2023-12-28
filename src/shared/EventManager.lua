@@ -1,15 +1,18 @@
 local EventManager = {}
 
+local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local events = ReplicatedStorage.Events
+
 local remoteEvents = ReplicatedStorage.RemoteEvents
 local eventEndedEvent = remoteEvents["EventEnded Event"]
 
-local Players = game:GetService("Players")
+
 
 -- LOCAL VARIABLES --
+local summonedObjectAmount = 100 --adjust depending on how much objects wished to summon
 
 -- LOCAL FUNCTIONS --
 local function findRandomPlayerCharacter(returnRoot)
@@ -23,6 +26,21 @@ local function findRandomPlayerCharacter(returnRoot)
 	else
 		return char
 	end
+end
+
+local function getAllCharacters()
+	local charList = {}
+	local plrList = Players:GetPlayers()
+	for _,plr in plrList do
+		local char
+		pcall(function()
+			char = plr.Character
+		end)
+		if char ~= nil then
+			table.insert(charList, char)
+		end
+	end
+	return charList
 end
 
 local function findRandomStair()
@@ -91,7 +109,7 @@ function EventManager.BananaEvent() --bananas!!
 	replicatedSound.Parent = game.Workspace["Game Sounds"]
 	replicatedSound:Play()
 	
-	for i = 1, 50 do
+	for i = 1, summonedObjectAmount do
 		local stair = findRandomStair()
 		if stair == nil then i-=1; continue end
 		local newBanana = banana:Clone()
@@ -107,7 +125,7 @@ function EventManager.BananaEvent() --bananas!!
 		)
 		
 		--newBanana.Anchored = true --TEST
-		newBanana.Parent = game.Workspace["Summoned Event Objects"]
+		newBanana.Parent = game.Workspace["Summoned Event Objects"].Obstacles
 		if math.abs(stair.Orientation.Y) == 0 or math.abs(stair.Orientation.Y) == 180 then
 			newBanana.Position = stair.Position + Vector3.new(
 				math.random(-stair.Size.X + 13, stair.Size.X - 13),
@@ -122,7 +140,6 @@ function EventManager.BananaEvent() --bananas!!
 			)
 		end
 		tween:Play()
-		newBanana.CanTouch = true
 	end
 	
 	task.wait(1.1)
@@ -150,7 +167,7 @@ function EventManager.LandMineEvent()
 	local replicatedSound = beep:Clone()
 	replicatedSound.Parent = game.Workspace["Game Sounds"]
 	replicatedSound:Play()
-	for i = 1, 50 do
+	for i = 1, summonedObjectAmount do
 		local stair = findRandomStair()
 		if stair == nil then i-=1; continue end
 		local newLandmine = landmine:Clone()
@@ -171,7 +188,7 @@ function EventManager.LandMineEvent()
 		)
 		
 		--newBanana.Anchored = true --TEST
-		newLandmine.Parent = game.Workspace["Summoned Event Objects"]
+		newLandmine.Parent = game.Workspace["Summoned Event Objects"].Obstacles
 		
 		--print(newLandmine:GetPivot())
 		
@@ -230,6 +247,7 @@ function EventManager.StatBoostEvent()
 	local players = Players:GetPlayers()
 	
 	local StatDisplayEvent = ReplicatedStorage.RemoteEvents["StatDisplay Event"]
+	local StatUpgradeEvent = ReplicatedStorage.RemoteEvents["StatUpgrade Event"]
 	
 	local statTable = {
 		"Health", "Jump", "Speed"
@@ -237,21 +255,26 @@ function EventManager.StatBoostEvent()
 	
 	local statChooser = math.random(#statTable)
 	local chosenStat = statTable[statChooser]
+	--local chosenStat = "Jump" --change
 	
 	StatDisplayEvent:FireAllClients(chosenStat)
 	
 	for _,v in ipairs(players) do
-		local char = v.Character or v.CharacterAdded:Wait()
-		local hum = char:FindFirstChild("Humanoid")
+		StatUpgradeEvent:FireAllClients(chosenStat)
 		
-		if chosenStat == "Health" then
-			hum.MaxHealth += 20
-			hum.Health += 20
-		elseif chosenStat == "Jump" then
-			hum.JumpPower += 20
-		elseif chosenStat == "Speed" then
-			hum.WalkSpeed += 4
-		end
+		--local char = v.Character or v.CharacterAdded:Wait()
+		--local hum = char:FindFirstChild("Humanoid")
+		--local root = char:FindFirstChild("HumanoidRootPart")
+		--weird case here idefk why
+		--if chosenStat == "Jump" then
+		--	local density = 0.3 --Change
+		--	local elasticity = 0.5 --Change
+		--	local elasticityWeight = 1 --Change
+		--	local friction = 1 --Change
+		--	local frictionWeight = 3 --Change
+
+		--	root.CustomPhysicalProperties = PhysicalProperties.new(density, friction, elasticity, frictionWeight, elasticityWeight)
+		--end
 	end
 	
 	task.wait(2)
@@ -263,7 +286,7 @@ function EventManager.TiktokSlideshowEvent()
 	
 	local players = Players:GetPlayers()
 	
-	local TiktokSlideshowFolder = ReplicatedStorage.Events.TiktokSlideshowEvent
+	local TiktokSlideshowFolder = events.TiktokSlideshowEvent
 	
 	for _, plr in ipairs(players) do
 		local slideShowGui = TiktokSlideshowFolder.SlideshowGui:Clone()
@@ -295,10 +318,10 @@ function EventManager.ShoopDaWhoopEvent()
 	--local target = findRandomStair() --get random stair
 	local target = findRandomPlayerCharacter(true)--get random player
 	
-	local ShoopDaWhoopFolder = ReplicatedStorage.Events.ShoopDaWhoopEvent
+	local ShoopDaWhoopFolder = events.ShoopDaWhoopEvent
 	
 	local shoopDaWhoop = ShoopDaWhoopFolder.ShoopDaWhoopPart:Clone()
-	shoopDaWhoop.Parent = game.Workspace["Summoned Event Objects"]
+	shoopDaWhoop.Parent = game.Workspace["Summoned Event Objects"].Structures
 	shoopDaWhoop.CFrame = CFrame.new(
 		target.Position + Vector3.new(math.random(20,100),math.random(20,100),math.random(20,100)),
 		target.Position
@@ -348,7 +371,8 @@ end
 --10% CHANCE EVENTS
 
 function EventManager.CleanStairsEvent() --clean stairs
-	for _, object in pairs(game.Workspace["Summoned Event Objects"]:GetChildren()) do
+	--local objWhiteList = {"pos", "Backrooms"}
+	for _, object in pairs(game.Workspace["Summoned Event Objects"].Obstacles:GetChildren()) do
 		object:Destroy()
 	end
 	
@@ -421,5 +445,81 @@ function EventManager.FusRoDahEvent() --fus ro dah!!
 end
 
 --1% CHANCE EVENTS
+function EventManager.BackRoomsEvent()
+	local charList = getAllCharacters()
+	--local plrsInBackroomsList = {}
+	--local posList = {}
+	
+	local backrooms
+	--check if theres already a backrooms instance
+	if game.Workspace["Summoned Event Objects"].Structures:FindFirstChild("Backrooms") then --if backrooms does exist
+		backrooms = game.Workspace["Summoned Event Objects"].Structures:FindFirstChild("Backrooms")
+	else --if not
+		backrooms = events.BackroomsEvent.Backrooms:Clone()
+		backrooms.Parent = game.Workspace["Summoned Event Objects"].Structures
+	end
+	
+	local exits = backrooms.Exits:GetChildren()
+	local floors = backrooms.Floors:GetChildren()
+	
+	--choose random exit
+	local randomExitIndex = math.random(#exits)
+	local chosenExit = exits[randomExitIndex]
+	
+	--local shift = 0
+	for i, exit in pairs(exits) do
+		if #exits == 1 then
+			--print("there exists only one exit")
+			break
+		end
+		if exit == chosenExit then
+			--print("exit found")
+			continue
+		else
+			--print("removing exit")
+			exit:Destroy()
+			--table.remove(exits, i-shift)
+			--shift += 1
+		end
+	end
+	
+	task.wait(2) -- intermission
+		
+	--get all players and teleport to backrooms
+	for i, char in pairs(charList) do
+		local plr = Players:GetPlayerFromCharacter(char)
+		
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local rootPos = root.CFrame
+		
+		local prevPlrPos = Instance.new("Part")
+		prevPlrPos.Parent = game.Workspace["Summoned Event Objects"]["Player Positions"]
+		prevPlrPos.Name = tostring(plr).."Pos"
+		prevPlrPos.Anchored = true
+		prevPlrPos.CFrame = rootPos
+		prevPlrPos.CanCollide = false
+		prevPlrPos.Transparency = 1
+
+		--posList[tostring(plr)] = tostring(rootPos)
+		
+		--choose random floor
+		local randomFloorIndex = math.random(#floors)
+		local chosenFloor = floors[randomFloorIndex]
+		
+		local updateEventGui = remoteEvents["UpdateEventGui Event"]
+		updateEventGui:FireClient(plr, "Backrooms")
+		
+		task.wait(1)
+		
+		remoteEvents["LocalEnvironment Event"]:FireClient(plr, "Fog")
+
+		char:MoveTo(chosenFloor.Position + Vector3.new(0, 5, 0))
+		
+	
+	end
+	
+	task.wait(3)
+	eventEndedEvent:FireAllClients()
+end
 
 return EventManager
