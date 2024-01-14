@@ -31,9 +31,9 @@ players.PlayerAdded:Connect(function(plr)
 	floor.Parent = leaderstats
 	
 	-- alitude --
-	local altitude = Instance.new("IntValue")
-	altitude.Name = "Altitude"
-	altitude.Parent = leaderstats
+	local stairs = Instance.new("IntValue")
+	stairs.Name = "Stairs"
+	stairs.Parent = leaderstats
 	
 	-- get players data --
 	local floorData
@@ -44,6 +44,7 @@ players.PlayerAdded:Connect(function(plr)
 	if success then
 		floor.Value = floorData
 	else
+		floor.Value = 0
 		print("There was an error when saving data.")
 		warn(err)
 	end
