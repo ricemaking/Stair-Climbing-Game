@@ -12,7 +12,7 @@ local eventEndedEvent = remoteEvents["EventEnded Event"]
 
 
 -- LOCAL VARIABLES --
-local summonedObjectAmount = 100 --adjust depending on how much objects wished to summon
+_G.summonedObjectAmount = 50 --adjust depending on how much objects wished to summon
 
 -- LOCAL FUNCTIONS --
 local function findRandomPlayerCharacter(returnRoot)
@@ -52,14 +52,19 @@ local function findRandomStair()
 	local story = level:GetChildren()[storyIndex]
 	--print(story)
 	
+	if story:IsA("StringValue") then
+		return nil
+	end
+	
 	local stairIndex = math.random(#story:GetChildren()) --get stair
 	local stair = story:GetChildren()[stairIndex]
+	--print(stair)
 	
 	if stair.Name ~= "Stair" then
 		return nil
 	end
 	
-	--print(stair)
+	
 	return stair
 end
 
@@ -109,7 +114,7 @@ function EventManager.BananaEvent() --bananas!!
 	replicatedSound.Parent = game.Workspace["Game Sounds"]
 	replicatedSound:Play()
 	
-	for i = 1, summonedObjectAmount do
+	for i = 1, _G.summonedObjectAmount do
 		local stair = findRandomStair()
 		if stair == nil then i-=1; continue end
 		local newBanana = banana:Clone()
@@ -126,9 +131,21 @@ function EventManager.BananaEvent() --bananas!!
 		
 		--newBanana.Anchored = true --TEST
 		newBanana.Parent = game.Workspace["Summoned Event Objects"].Obstacles
+		
+		local stairXBound
+		local stairZBound
+		
+		if stair.Parent.Parent:FindFirstChild("StairType").Value == "ObbyTwo" then
+			stairXBound = 0
+			stairZBound = 0
+		else
+			stairXBound = math.random(-stair.Size.X + 13, stair.Size.X - 13)
+			stairZBound = math.random((-stair.Size.Z - 10), (stair.Size.Z + 10))
+		end
+		
 		if math.abs(stair.Orientation.Y) == 0 or math.abs(stair.Orientation.Y) == 180 then
 			newBanana.Position = stair.Position + Vector3.new(
-				math.random(-stair.Size.X + 13, stair.Size.X - 13),
+				stairXBound,
 				1,
 				0 --math.random(-stair.Size.Z, stair.Size.Z)
 			)
@@ -136,7 +153,7 @@ function EventManager.BananaEvent() --bananas!!
 			newBanana.Position = stair.Position + Vector3.new(
 				0, --math.random(-stair.Size.X, stair.Size.X),
 				1,
-				math.random((-stair.Size.Z - 10), (stair.Size.Z + 10))
+				stairZBound
 			)
 		end
 		tween:Play()
@@ -167,7 +184,7 @@ function EventManager.LandMineEvent()
 	local replicatedSound = beep:Clone()
 	replicatedSound.Parent = game.Workspace["Game Sounds"]
 	replicatedSound:Play()
-	for i = 1, summonedObjectAmount do
+	for i = 1, _G.summonedObjectAmount do
 		local stair = findRandomStair()
 		if stair == nil then i-=1; continue end
 		local newLandmine = landmine:Clone()
@@ -190,14 +207,22 @@ function EventManager.LandMineEvent()
 		--newBanana.Anchored = true --TEST
 		newLandmine.Parent = game.Workspace["Summoned Event Objects"].Obstacles
 		
-		--print(newLandmine:GetPivot())
+		local stairXBound
+		local stairZBound
+		if stair.Parent.Parent:FindFirstChild("StairType").Value == "ObbyTwo" then
+			stairXBound = 0
+			stairZBound = 0
+		else
+			stairXBound = math.random(-stair.Size.X + 13, stair.Size.X - 13)
+			stairZBound = math.random((-stair.Size.Z - 10), (stair.Size.Z + 10))
+		end
 		
 		if math.abs(stair.Orientation.Y) == 0 or math.abs(stair.Orientation.Y) == 180 then
 			
 			if math.abs(stair.Orientation.Y) == 0 then
 				newLandmine:PivotTo(newLandmine:GetPivot() * CFrame.Angles(math.rad(-45),0,math.rad(90)))
 				newLandmine:MoveTo(stair.Position + Vector3.new(
-					math.random(-stair.Size.X + 13, stair.Size.X - 13),
+					stairXBound,
 					0,
 					-1 --math.random(-stair.Size.Z, stair.Size.Z)
 					)
@@ -206,7 +231,7 @@ function EventManager.LandMineEvent()
 			elseif math.abs(stair.Orientation.Y) == 180 then
 				newLandmine:PivotTo(newLandmine:GetPivot() * CFrame.Angles(math.rad(45),0,math.rad(90)))
 				newLandmine:MoveTo(stair.Position + Vector3.new(
-					math.random(-stair.Size.X + 13, stair.Size.X - 13),
+					stairXBound,
 					0,
 					1 --math.random(-stair.Size.Z, stair.Size.Z)
 					)
@@ -230,8 +255,6 @@ function EventManager.LandMineEvent()
 		tween1:Play()
 		tween2:Play()
 		
-		--print(newLandmine:GetPivot())
-		
 	end
 	task.wait(1.1)
 	for _,v in pairs(landMineArray) do
@@ -247,7 +270,7 @@ function EventManager.StatBoostEvent()
 	local players = Players:GetPlayers()
 	
 	local StatDisplayEvent = ReplicatedStorage.RemoteEvents["StatDisplay Event"]
-	local StatUpgradeEvent = ReplicatedStorage.RemoteEvents["StatUpgrade Event"]
+	local StatUpgradeEvent = ReplicatedStorage.RemoteEvents["StatChange Event"]
 	
 	local statTable = {
 		"Health", "Jump", "Speed"
@@ -255,26 +278,11 @@ function EventManager.StatBoostEvent()
 	
 	local statChooser = math.random(#statTable)
 	local chosenStat = statTable[statChooser]
-	--local chosenStat = "Jump" --change
 	
 	StatDisplayEvent:FireAllClients(chosenStat)
 	
 	for _,v in ipairs(players) do
 		StatUpgradeEvent:FireAllClients(chosenStat)
-		
-		--local char = v.Character or v.CharacterAdded:Wait()
-		--local hum = char:FindFirstChild("Humanoid")
-		--local root = char:FindFirstChild("HumanoidRootPart")
-		--weird case here idefk why
-		--if chosenStat == "Jump" then
-		--	local density = 0.3 --Change
-		--	local elasticity = 0.5 --Change
-		--	local elasticityWeight = 1 --Change
-		--	local friction = 1 --Change
-		--	local frictionWeight = 3 --Change
-
-		--	root.CustomPhysicalProperties = PhysicalProperties.new(density, friction, elasticity, frictionWeight, elasticityWeight)
-		--end
 	end
 	
 	task.wait(2)
