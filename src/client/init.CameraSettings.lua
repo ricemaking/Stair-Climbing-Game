@@ -2,6 +2,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remoteEvents = ReplicatedStorage.RemoteEvents
 local camShakeEvent = remoteEvents["ShakeCam Event"]
 local camShakeEventDistance = remoteEvents["ShakeCamDistance Event"]
+local disableShiftlockEvent = remoteEvents["DisableShiftlock Event"]
+
+
+local camUtils = require(script.Parent:WaitForChild("PlayerModule"):WaitForChild("CameraModule"):WaitForChild("CameraUtils"))
+--local camUtils = require(cameraModule.CameraUtils)
 
 plr = game.Players.LocalPlayer
 
@@ -41,3 +46,15 @@ camShakeEventDistance.OnClientEvent:Connect(function(shakes, obj)
 	end
 	hum.CameraOffset = Vector3.new(0,0,0)
 end)
+
+--disableShiftlockEvent.OnClientEvent:Connect(function(t)
+--	--print('yessah')
+	
+--	plr.DevEnableMouseLock = false
+--	camUtils.setRotationTypeOverride(Enum.RotationType.MovementRelative)
+	
+--	task.wait(t)
+	
+--	plr.DevEnableMouseLock = true
+--	camUtils.restoreRotationType()
+--end)
