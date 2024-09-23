@@ -4,17 +4,25 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
 local events = ReplicatedStorage.Events
 
 local remoteEvents = ReplicatedStorage.RemoteEvents
 local eventEndedEvent = remoteEvents["EventEnded Event"]
 
-
+local PlayerStatUpdater = require(game:GetService("ServerScriptService")["Game Management"].PlayerStatUpdater)
 
 -- LOCAL VARIABLES --
 _G.summonedObjectAmount = 50 --adjust depending on how much objects wished to summon
+local debrisTimer = 60
 
 -- LOCAL FUNCTIONS --
+
+--[[ #findRandomPlayerCharacter 
+	* Finds a random character
+	* @param returnRoot 	bool 						describes if root wants to be returned instead of the character
+	* @return char/root		Character/HumanoidRootPart 	either the character or root of random player
+]]--
 local function findRandomPlayerCharacter(returnRoot)
 	local plrList = Players:GetPlayers()
 	local randomSelection = math.random(#plrList)
@@ -28,6 +36,10 @@ local function findRandomPlayerCharacter(returnRoot)
 	end
 end
 
+--[[ #getAllCharacters 
+	* Gets all characters in current game
+	* @return charList	table 	table of Character instances
+]]--
 local function getAllCharacters()
 	local charList = {}
 	local plrList = Players:GetPlayers()
@@ -43,6 +55,10 @@ local function getAllCharacters()
 	return charList
 end
 
+--[[ #findRandomStair 
+	* Finds a random stair within the levels folder
+	* @return stair 	Part	instance of stair
+]]--
 local function findRandomStair()
 	local levelIndex = math.random(#game.Workspace.Levels:GetChildren()) --get level
 	local level = game.Workspace.Levels:GetChildren()[levelIndex]
@@ -52,7 +68,7 @@ local function findRandomStair()
 	local story = level:GetChildren()[storyIndex]
 	--print(story)
 	
-	if story:IsA("StringValue") then
+	if not story:IsA("Model") then
 		return nil
 	end
 	
@@ -68,8 +84,13 @@ local function findRandomStair()
 	return stair
 end
 
+--[[ #findRandomStairArr 
+	* Finds and gives a specified amount of random stairs in format of am array
+	* @param numStairs 	int 	amount of desired stairs to be selected
+	* @return stairArr	table 	array of randomly selected stairs
+]]--
 local function findRandomStairArr(numStairs)
-	local arr = {}
+	local stairArr = {}
 	
 	for i = 0, numStairs do
 		local levelIndex = math.random(#game.Workspace.Levels:GetChildren()) --get level
@@ -84,22 +105,28 @@ local function findRandomStairArr(numStairs)
 		local stair = story:GetChildren()[stairIndex]
 
 		--print(stair)
-		table.insert(arr, stair)
+		table.insert(stairArr, stair)
 	end
+	
+	return stairArr
 end
 
+--[[ #getAllStairs 
+	* Gets all the current existing stairs (wait why the #### would i need this)
+	* @return stairArr	table 	array of all stairs
+]]--
 local function getAllStairs()
-	local arr = {}
+	local stairArr = {}
 	for i, level in game.Workspace.Levels:GetChildren() do --get all levels
 		for j, story in level:GetChildren() do --get all stories
 			for k, stair in story:GetChildren() do
-				table.insert(arr, stair)
+				table.insert(stairArr, stair)
 				print(stair)
 			end
 		end
 	end
 	
-	return arr
+	return stairArr
 end
 
 -- EVENT FUNCTIONS --
@@ -116,7 +143,9 @@ function EventManager.BananaEvent() --bananas!!
 	
 	for i = 1, _G.summonedObjectAmount do
 		local stair = findRandomStair()
-		if stair == nil then i-=1; continue end
+		if stair == nil then i-=1
+			continue
+		end
 		local newBanana = banana:Clone()
 		table.insert(bananaArray, newBanana)
 		newBanana.Transparency = 1
@@ -142,6 +171,8 @@ function EventManager.BananaEvent() --bananas!!
 			stairXBound = math.random(-stair.Size.X + 13, stair.Size.X - 13)
 			stairZBound = math.random((-stair.Size.Z - 10), (stair.Size.Z + 10))
 		end
+		
+		Debris:AddItem(newBanana, debrisTimer)
 		
 		if math.abs(stair.Orientation.Y) == 0 or math.abs(stair.Orientation.Y) == 180 then
 			newBanana.Position = stair.Position + Vector3.new(
@@ -180,13 +211,15 @@ function EventManager.LandMineEvent()
 	
 	local landMineArray = {}
 	local landmine = events.LandmineEvent.Landmine
-	local beep = landmine["Beep Sound"]
+	local beep = landmine.SoundBox["Beep Sound"]
 	local replicatedSound = beep:Clone()
 	replicatedSound.Parent = game.Workspace["Game Sounds"]
 	replicatedSound:Play()
 	for i = 1, _G.summonedObjectAmount do
 		local stair = findRandomStair()
-		if stair == nil then i-=1; continue end
+		if stair == nil then i-=1
+			continue
+		end
 		local newLandmine = landmine:Clone()
 		table.insert(landMineArray, newLandmine)
 		newLandmine["Landmine Button"].CanTouch = false
@@ -208,31 +241,44 @@ function EventManager.LandMineEvent()
 		newLandmine.Parent = game.Workspace["Summoned Event Objects"].Obstacles
 		
 		local stairXBound
+		local stairYBound
 		local stairZBound
+		local angledCFrameZeroDegree = CFrame.Angles(math.rad(-45),0,math.rad(90))
+		local angledCFrame90Degree = CFrame.Angles(0,0,math.rad(135))
+		local angledCFrame180Degree = CFrame.Angles(math.rad(45),0,math.rad(90))
+		local angledCFrame270Degree = CFrame.Angles(0,0,math.rad(45))
 		if stair.Parent.Parent:FindFirstChild("StairType").Value == "ObbyTwo" then
 			stairXBound = 0
+			stairYBound = .5 --.225
 			stairZBound = 0
+			angledCFrameZeroDegree = CFrame.Angles(0,0,math.rad(90))
+			angledCFrame90Degree = CFrame.Angles(0,0,math.rad(90))
+			angledCFrame180Degree = CFrame.Angles(0,0,math.rad(90))
+			angledCFrame270Degree = CFrame.Angles(0,0,math.rad(90))
 		else
 			stairXBound = math.random(-stair.Size.X + 13, stair.Size.X - 13)
+			stairYBound = .775
 			stairZBound = math.random((-stair.Size.Z - 10), (stair.Size.Z + 10))
 		end
+		
+		Debris:AddItem(newLandmine, debrisTimer)
 		
 		if math.abs(stair.Orientation.Y) == 0 or math.abs(stair.Orientation.Y) == 180 then
 			
 			if math.abs(stair.Orientation.Y) == 0 then
-				newLandmine:PivotTo(newLandmine:GetPivot() * CFrame.Angles(math.rad(-45),0,math.rad(90)))
+				newLandmine:PivotTo(newLandmine:GetPivot() * angledCFrameZeroDegree)
 				newLandmine:MoveTo(stair.Position + Vector3.new(
 					stairXBound,
-					0,
+					stairYBound,
 					-1 --math.random(-stair.Size.Z, stair.Size.Z)
 					)
 				)
 				
 			elseif math.abs(stair.Orientation.Y) == 180 then
-				newLandmine:PivotTo(newLandmine:GetPivot() * CFrame.Angles(math.rad(45),0,math.rad(90)))
+				newLandmine:PivotTo(newLandmine:GetPivot() * angledCFrame180Degree)
 				newLandmine:MoveTo(stair.Position + Vector3.new(
 					stairXBound,
-					0,
+					stairYBound,
 					1 --math.random(-stair.Size.Z, stair.Size.Z)
 					)
 				)
@@ -241,17 +287,17 @@ function EventManager.LandMineEvent()
 		elseif math.abs(stair.Orientation.Y) == 90 then
 			newLandmine:MoveTo(stair.Position + Vector3.new(
 				0, --math.random(-stair.Size.X, stair.Size.X),
-				1,
-				math.random((-stair.Size.Z - 10), (stair.Size.Z + 10))
+				stairYBound,
+				stairZBound
 				)
 			)
 			if stair.Orientation.Y == 90 then
-				newLandmine:PivotTo(newLandmine:GetPivot() * CFrame.Angles(0,0,math.rad(135)))
+				newLandmine:PivotTo(newLandmine:GetPivot() * angledCFrame90Degree)
 			elseif stair.Orientation.Y == -90 then
-				newLandmine:PivotTo(newLandmine:GetPivot() * CFrame.Angles(0,0,math.rad(45)))
+				newLandmine:PivotTo(newLandmine:GetPivot() * angledCFrame270Degree)
 			end
-			
 		end
+		
 		tween1:Play()
 		tween2:Play()
 		
@@ -363,7 +409,7 @@ function EventManager.ShoopDaWhoopEvent()
 	laserSound:Play()
 	
 	task.wait(2.8)
-	remoteEvents["ShakeCamDistance Event"]:FireAllClients(100, shoopDaWhoop)
+	remoteEvents["Client Events"]["Camera Events"]["ShakeCamDistance Event"]:FireAllClients(100, shoopDaWhoop)
 	laser.Transparency = 0
 	fireLaser:Play()
 	
@@ -420,7 +466,7 @@ function EventManager.FusRoDahEvent() --fus ro dah!!
 
 	tweenToBlue:Play()
 	print("FUSRODAH!")
-	remoteEvents["ShakeCam Event"]:FireAllClients(20)
+	remoteEvents["Client Events"]["Camera Events"]["ShakeCam Event"]:FireAllClients(20)
 	for _, plr in ipairs(players) do
 		local char = plr.Character or plr.CharacterAdded:Wait()
 		local hum = char:WaitForChild("Humanoid")
@@ -435,7 +481,7 @@ function EventManager.FusRoDahEvent() --fus ro dah!!
 
 	replicatedVikingSound:Stop()
 	replicatedVikingSound:Destroy()
-
+	
 	task.wait(3)
 	
 	eventEndedEvent:FireAllClients() --end event
@@ -446,17 +492,17 @@ function EventManager.FusRoDahEvent() --fus ro dah!!
 	for _, plr in ipairs(players) do
 		local char = plr.Character or plr.CharacterAdded:Wait()
 		local hum = char:WaitForChild("Humanoid")
+		if not hum then return end
 		hum.PlatformStand = false
 		hum.UseJumpPower = false
 		hum.JumpPower = prevJumpPower
+		hum.Parent.PrimaryPart.Velocity = Vector3.new(0,0,0)
 	end
 end
 
 --1% CHANCE EVENTS
 function EventManager.BackRoomsEvent()
 	local charList = getAllCharacters()
-	--local plrsInBackroomsList = {}
-	--local posList = {}
 	
 	local backrooms
 	--check if theres already a backrooms instance
@@ -473,21 +519,19 @@ function EventManager.BackRoomsEvent()
 	--choose random exit
 	local randomExitIndex = math.random(#exits)
 	local chosenExit = exits[randomExitIndex]
+	local tpScript = backrooms["Teleport Script"]
+	tpScript.Parent = chosenExit
+	tpScript.Enabled = true
 	
 	--local shift = 0
 	for i, exit in pairs(exits) do
 		if #exits == 1 then
-			--print("there exists only one exit")
 			break
 		end
 		if exit == chosenExit then
-			--print("exit found")
 			continue
 		else
-			--print("removing exit")
 			exit:Destroy()
-			--table.remove(exits, i-shift)
-			--shift += 1
 		end
 	end
 	
@@ -496,6 +540,8 @@ function EventManager.BackRoomsEvent()
 	--get all players and teleport to backrooms
 	for i, char in pairs(charList) do
 		local plr = Players:GetPlayerFromCharacter(char)
+		
+		if not plr then continue end
 		
 		local root = char:FindFirstChild("HumanoidRootPart")
 		local rootPos = root.CFrame
@@ -507,14 +553,12 @@ function EventManager.BackRoomsEvent()
 		prevPlrPos.CFrame = rootPos
 		prevPlrPos.CanCollide = false
 		prevPlrPos.Transparency = 1
-
-		--posList[tostring(plr)] = tostring(rootPos)
 		
 		--choose random floor
 		local randomFloorIndex = math.random(#floors)
 		local chosenFloor = floors[randomFloorIndex]
 		
-		local updateEventGui = remoteEvents["UpdateEventGui Event"]
+		local updateEventGui = remoteEvents["Client Events"]["GUI Events"]["UpdateEventGui Event"]
 		updateEventGui:FireClient(plr, "Backrooms")
 		
 		task.wait(1)
